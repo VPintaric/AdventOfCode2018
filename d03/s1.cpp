@@ -8,7 +8,6 @@ int main( void ) {
     std::regex expr( "^#[0-9]+ @ ([0-9]+),([0-9]+): ([0-9]+)x([0-9]+)$" );
     std::string line;
 
-    // Unordered map would be better but I'm lazy
     std::map< std::pair< int, int >, int > counter;
 
     while( std::getline( std::cin, line )) {
