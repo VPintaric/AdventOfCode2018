@@ -35,7 +35,7 @@ State prunePadding( const State &state ) {
     auto last = state.track.find_last_of( '#' );
 
     State prunedState;
-    prunedState.track = state.track.substr( first, last - first );
+    prunedState.track = state.track.substr( first, last - first + 1 );
     prunedState.firstIndex = state.firstIndex + first;
 
     return prunedState;
@@ -92,6 +92,17 @@ void advanceState( State &state, std::vector< Rule > &rules ) {
     padIfNeeded( state );
 }
 
+long calculateSum( const State &state ) {
+    long sum = 0;
+    for( int i = 0; i < state.track.size(); ++i ) {
+        if( state.track[ i ] == '#' ) {
+            sum += state.firstIndex + i;
+        }
+    }
+
+    return sum;
+}
+
 int main( void ) {
     auto state = getInitialState();
 
@@ -104,7 +115,7 @@ int main( void ) {
     auto rules = parseRules();
 
     std::vector< std::string > stateHistory;
-    std::vector< int > firstIndexHistory;
+    std::vector< int > sumHistory;
     int cycleStart = -1;
 
     State newCycleStartState;
@@ -122,9 +133,7 @@ int main( void ) {
 
         if( cycleStart == -1 ) {
             stateHistory.push_back( prunedState.track );
-            firstIndexHistory.push_back( prunedState.firstIndex );
-            std::cout << prunedState.track << '\n';
-            std::cout << prunedState.firstIndex << '\n';
+            sumHistory.push_back( calculateSum( prunedState ));
         } else {
             break;
         }
@@ -133,40 +142,17 @@ int main( void ) {
     }
 
     auto cycleLength = stateHistory.size() - cycleStart;
-    auto generationsLeft = 50000000001L - (stateHistory.size() - cycleLength);
+    auto generationsLeft = 50000000000L - (stateHistory.size() - cycleLength);
     auto nCycles = generationsLeft / cycleLength;
     auto leftOver = generationsLeft % cycleLength;
 
-    auto firstIndexAtStartOfCycle = firstIndexHistory[ cycleStart ];
-    auto firstIndexDiffAfterCycle = newCycleStartState.firstIndex - firstIndexAtStartOfCycle;
-    auto leftOverDiff = firstIndexHistory[ cycleStart + leftOver ] - firstIndexHistory[ cycleStart ];
+    auto sumAtStartOfCycle = sumHistory[ cycleStart ];
+    auto sumDiffAfterCycle = calculateSum( newCycleStartState ) - sumAtStartOfCycle;
+    auto sumLeftOverDiff = sumHistory[ cycleStart + leftOver ] - sumHistory[ cycleStart ];
 
-    std::cout << '\n';
-    std::cout << stateHistory.size() << '\n';
-    std::cout << cycleStart << '\n';
-    std::cout << cycleLength << '\n';
-    std::cout << generationsLeft << '\n';
-    std::cout << nCycles << '\n';
-    std::cout << leftOver << '\n';
-    std::cout << firstIndexAtStartOfCycle << '\n';
-    std::cout << firstIndexDiffAfterCycle << '\n';
-    std::cout << leftOverDiff << '\n';
+    auto finalSum = sumAtStartOfCycle + sumDiffAfterCycle * nCycles + sumLeftOverDiff;
 
-    State finalState;
-    finalState.track = stateHistory[ cycleStart + leftOver ];
-    finalState.firstIndex = firstIndexAtStartOfCycle + nCycles * firstIndexDiffAfterCycle + leftOverDiff;
-
-    std::cout << finalState.track << '\n';
-    std::cout << finalState.firstIndex << '\n';
-
-    long sum = 0;
-    for( int i = 0; i < finalState.track.size(); ++i ) {
-        if( finalState.track[ i ] == '#' ) {
-            sum += finalState.firstIndex + i;
-        }
-    }
-
-    std::cout << sum << std::endl;
+    std::cout << finalSum << '\n';
 
     return 0;
 }
