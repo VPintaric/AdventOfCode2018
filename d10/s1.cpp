@@ -31,11 +31,6 @@ std::vector< Point > parseInput() {
         std::smatch matchGroup;
         std::regex_match( line, matchGroup, expr );
 
-        if( matchGroup.size() != 4 ) {
-            int i = 0;
-            ++i;
-        }
-
         Point p;
         p.x  = std::stoi( matchGroup[ 1 ] );
         p.y  = std::stoi( matchGroup[ 2 ] );
