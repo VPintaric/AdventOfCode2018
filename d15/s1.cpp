@@ -2,13 +2,10 @@
 #include <vector>
 #include <string>
 #include <map>
-#include <optional>
 #include <queue>
 #include <set>
 #include <algorithm>
 #include <memory>
-#include <thread>
-#include <chrono>
 
 constexpr int initialHealth = 200;
 constexpr int initialAttack = 3;
