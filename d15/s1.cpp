@@ -36,12 +36,6 @@ struct Grid {
     bool isAdjacentTo( int x, int y, char c ) const {
         return getAt( x, y - 1 ) == c || getAt( x - 1, y ) == c || getAt( x + 1, y ) == c || getAt( x, y + 1 ) == c;
     }
-
-    void print() const {
-        for( const auto &row : data ) {
-            std::cout << row << '\n';
-        }
-    }
 };
 
 struct Position {
@@ -200,22 +194,22 @@ struct Node {
 
     bool operator<( const Node &other ) const {
         if( position != other.position ) {
-            return !(position < other.position);
+            return position < other.position;
         } else {
-            return !(firstMove < other.firstMove);
+            return firstMove < other.firstMove;
         }
     }
 };
 
-struct SearchNode {
+struct CostNode {
     int cost;
     Node node;
 
-    bool operator<( const SearchNode &other ) const {
+    bool operator<( const CostNode &other ) const {
         if( cost != other.cost ) {
             return cost > other.cost;
         } else {
-            return node < other.node;
+            return !(node < other.node);
         }
     }
 };
@@ -270,50 +264,49 @@ void moveEntity( Grid &grid, PositionEntityMap &positionToEntity, Entity &entity
         return;
     }
 
-    std::priority_queue< SearchNode > nodes;
+    std::priority_queue< CostNode > costNodes;
     std::set< Node > closed;
 
+    Node firstNode;
+    firstNode.position = entity.position;
+    firstNode.firstMove = entity.position;
     auto neighbours = getNeighbours( grid, entity.position );
     for( const auto &neighbour : neighbours ) {
-        SearchNode node;
-        node.node.position = neighbour;
-        node.node.firstMove = neighbour;
-        node.cost = 1;
+        CostNode costNode;
+        costNode.node.position = neighbour;
+        costNode.node.firstMove = neighbour;
+        costNode.cost = 1;
 
-        nodes.push( node );
+        costNodes.push( costNode );
+        closed.insert( costNode.node );
     }
-    Node firstClosed;
-    firstClosed.position = entity.position;
-    firstClosed.firstMove = entity.position;
-    closed.insert( firstClosed );
+
+    closed.insert( firstNode );
 
     Position positionToMoveTo = entity.position;
-    while( !nodes.empty()) {
-        std::cout << nodes.size() << ':' << closed.size() << ' ';
+    while( !costNodes.empty()) {
+        auto costNode = costNodes.top();
+        costNodes.pop();
 
-        auto node = nodes.top();
-        nodes.pop();
-
-        if( grid.isAdjacentTo( node.node.position.x, node.node.position.y, targetType )) {
-            positionToMoveTo = node.node.firstMove;
+        if( grid.isAdjacentTo( costNode.node.position.x, costNode.node.position.y, targetType )) {
+            positionToMoveTo = costNode.node.firstMove;
             break;
         }
 
-        neighbours = getNeighbours( grid, node.node.position );
+        neighbours = getNeighbours( grid, costNode.node.position );
         for( const auto &neighbour : neighbours ) {
             Node newNode;
             newNode.position = neighbour;
-            newNode.firstMove = node.node.firstMove;
+            newNode.firstMove = costNode.node.firstMove;
             if( closed.find( newNode ) == closed.end()) {
-                SearchNode newSearchNode;
-                newSearchNode.node = newNode;
-                newSearchNode.cost = node.cost + 1;
+                CostNode newCostNode;
+                newCostNode.node = newNode;
+                newCostNode.cost = costNode.cost + 1;
 
-                nodes.push( newSearchNode );
+                costNodes.push( newCostNode );
+                closed.insert( newNode );
             }
         }
-
-        closed.insert( node.node );
     }
 
     grid.setAt( entity.position.x, entity.position.y, '.' );
@@ -321,20 +314,6 @@ void moveEntity( Grid &grid, PositionEntityMap &positionToEntity, Entity &entity
     entity.position = positionToMoveTo;
     grid.setAt( entity.position.x, entity.position.y, entityType );
     positionToEntity[ entity.position ] = &entity;
-}
-
-void diagnosticPrint( Grid &grid, EntityVector &entities, PositionEntityMap &positionToEntity ) {
-    std::cout << "================\n";
-    grid.print();
-    // for( const auto &entity : entities ) {
-    //     std::cout << entity.get() << " (" << entity->position.x << " " << entity->position.y << ") HP = " << entity->health << '\n';
-    // }
-
-    // for( const auto &kv : positionToEntity ) {
-    //     std::cout << "(" << kv.first.x << " " << kv.first.y << ") -> " << kv.second << '\n';
-    // }
-
-    std::cout << "================\n" << std::endl;
 }
 
 int main( void ) {
@@ -347,12 +326,9 @@ int main( void ) {
         positionToEntity[ entity->position ] = entity.get();
     }
 
-    // diagnosticPrint( grid, entities, positionToEntity );
-
     int nRounds = 0;
     bool battleIsOver = false;
     while( !battleIsOver ) {
-        std::cout << nRounds << '\n';
         std::sort( entities.begin(), entities.end(), 
             []( const std::unique_ptr< Entity > &e1, const std::unique_ptr< Entity > &e2 ) -> bool {
                 return *e1 < *e2;
@@ -363,7 +339,6 @@ int main( void ) {
                 continue;
             }
 
-            std::cout << entity.get() << " (" << entity->position.x << " " << entity->position.y << ") HP = " << entity->health << '\n';
             moveEntity( grid, positionToEntity, *entity );
             if( nElves == 0 || nGoblins == 0 ) {
                 battleIsOver = true;
@@ -372,12 +347,8 @@ int main( void ) {
 
             auto target = getAttackTarget( grid, positionToEntity, *entity );
             if( target != nullptr ) {
-                // std::cout << &entity << " attacking " << target << '\n';
                 attackTarget( grid, positionToEntity, *entity, *target, nElves, nGoblins );
             }
-
-            diagnosticPrint( grid, entities, positionToEntity );
-            // std::this_thread::sleep_for( std::chrono::milliseconds(300));
         }
 
         if( !battleIsOver ) {
