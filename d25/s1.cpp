@@ -38,8 +38,6 @@ int main( void ) {
 
     Groups groups;
     for( const auto &p : points ) {
-        std::cout << "Processing: " << p.x << ' ' << p.y << ' ' << p.z << ' ' << p.w << '\n'; 
-
         Groups::iterator belongsTo = groups.end();
 
         auto iter = groups.begin();
